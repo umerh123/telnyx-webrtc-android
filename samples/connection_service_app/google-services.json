@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "69278099989",
+    "project_id": "swiftbyte-dialer-c2056",
+    "storage_bucket": "swiftbyte-dialer-c2056.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:69278099989:android:5ccbcbb2de6f9623e4bc1c",
+        "android_client_info": {
+          "package_name": "co.swiftbyte.dialer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg7gqZSYQq-_4uevyWSqSjIl6mxQy5ocA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
