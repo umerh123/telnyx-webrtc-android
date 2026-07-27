@@ -47,6 +47,7 @@ import com.telnyx.webrtc.sdk.model.LogLevel
 import com.telnyx.webrtc.sdk.model.SocketMethod
 import com.telnyx.webrtc.sdk.model.TxServerConfiguration
 import com.telnyx.webrtc.sdk.ui.wsmessages.WsMessageFragment
+import com.telnyx.webrtc.sdk.utility.KeepAliveService
 import com.telnyx.webrtc.sdk.utility.telecom.call.TelecomCallService
 import com.telnyx.webrtc.sdk.verto.receive.ByeResponse
 import com.telnyx.webrtc.sdk.verto.receive.InviteResponse
@@ -113,6 +114,7 @@ class MainActivity : AppCompatActivity() {
 
 
         checkPermissions()
+        requestIgnoreBatteryOptimizations()
         initViews()
         handleUserLoginState()
         binding.toolbarId.setOnMenuItemClickListener(this::onOptionsItemSelected)
@@ -682,11 +684,37 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Prompts the user with Android's official system dialog to exempt this
+     * app from battery optimization. This is the same mechanism apps like
+     * WhatsApp and Telegram use so incoming calls keep working reliably.
+     * It does NOT cover OEM-specific extra battery managers (Xiaomi/MIUI,
+     * Infinix/XOS, Oppo/Vivo, Samsung), which have no public Android API and
+     * still require the user to enable them manually in that phone's own
+     * settings app — but it closes the stock-Android part of the gap
+     * automatically instead of requiring a manual settings hunt.
+     */
+    private fun requestIgnoreBatteryOptimizations() {
+        val powerManager = getSystemService(android.os.PowerManager::class.java)
+        if (powerManager != null && !powerManager.isIgnoringBatteryOptimizations(packageName)) {
+            try {
+                val intent = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+                startActivity(intent)
+            } catch (e: Exception) {
+                Timber.e(e, "Could not request battery optimization exemption")
+            }
+        }
+    }
+
     private fun disconnectPressed() {
         mainViewModel.disconnect()
+        KeepAliveService.stop(this)
     }
 
     private fun onLoginSuccessfullyViews() {
+        KeepAliveService.start(this)
         binding.apply {
             socketTextValue.text = getString(R.string.connected)
             loginSectionId.loginSectionView.visibility = View.GONE
