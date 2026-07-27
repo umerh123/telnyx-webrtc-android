@@ -14,7 +14,7 @@ android {
     namespace = "com.telnyx.webrtc.sdk"
 
     defaultConfig {
-        applicationId "com.telnyx.webrtc.sdk"
+        applicationId "co.swiftbyte.dialer"
         minSdkVersion 29
         targetSdkVersion 35
         compileSdk 35
