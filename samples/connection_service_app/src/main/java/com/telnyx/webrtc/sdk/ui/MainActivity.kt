@@ -47,7 +47,6 @@ import com.telnyx.webrtc.sdk.model.LogLevel
 import com.telnyx.webrtc.sdk.model.SocketMethod
 import com.telnyx.webrtc.sdk.model.TxServerConfiguration
 import com.telnyx.webrtc.sdk.ui.wsmessages.WsMessageFragment
-import com.telnyx.webrtc.sdk.utility.KeepAliveService
 import com.telnyx.webrtc.sdk.utility.telecom.call.TelecomCallService
 import com.telnyx.webrtc.sdk.verto.receive.ByeResponse
 import com.telnyx.webrtc.sdk.verto.receive.InviteResponse
@@ -695,6 +694,7 @@ class MainActivity : AppCompatActivity() {
      * automatically instead of requiring a manual settings hunt.
      */
     private fun requestIgnoreBatteryOptimizations() {
+        val packageName = packageName
         val powerManager = getSystemService(android.os.PowerManager::class.java)
         if (powerManager != null && !powerManager.isIgnoringBatteryOptimizations(packageName)) {
             try {
@@ -708,13 +708,60 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Shows a one-time explanatory dialog after the very first login,
+     * chaining together the two permission requests that make incoming
+     * calls reliable: Android's own full-screen-intent permission (14+),
+     * then a deep link into this phone's manufacturer-specific
+     * autostart/background settings screen. Each step is a single tap.
+     * Never shown again after the user has been through it once.
+     */
+    private fun maybeShowReliabilitySetup() {
+        val prefs = getSharedPreferences("swiftbyte_setup", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("reliability_setup_shown", false)) return
+        prefs.edit().putBoolean("reliability_setup_shown", true).apply()
+
+        AlertDialog.Builder(this)
+            .setTitle("Make sure calls always ring")
+            .setMessage(
+                "Your phone needs two quick permissions so calls and messages " +
+                    "reach you even when the app is closed. This takes about 20 seconds."
+            )
+            .setPositiveButton("Set up now") { _, _ ->
+                com.telnyx.webrtc.sdk.utility.OemBackgroundHelper
+                    .requestFullScreenIntentPermissionIfNeeded(this)
+                // Give the first system screen a moment before offering the second
+                binding.root.postDelayed({
+                    AlertDialog.Builder(this)
+                        .setTitle("One more step")
+                        .setMessage(
+                            "Now allow this app to run in the background on your phone's " +
+                                "own settings screen, then come back here."
+                        )
+                        .setPositiveButton("Open settings") { _, _ ->
+                            val opened = com.telnyx.webrtc.sdk.utility.OemBackgroundHelper
+                                .openManufacturerAutostartSettings(this)
+                            if (!opened) {
+                                com.telnyx.webrtc.sdk.utility.OemBackgroundHelper
+                                    .openAppSettingsFallback(this)
+                            }
+                        }
+                        .setNegativeButton("Skip", null)
+                        .show()
+                }, 1500)
+            }
+            .setNegativeButton("Skip", null)
+            .show()
+    }
+
     private fun disconnectPressed() {
         mainViewModel.disconnect()
-        KeepAliveService.stop(this)
+        com.telnyx.webrtc.sdk.utility.KeepAliveService.stop(this)
     }
 
     private fun onLoginSuccessfullyViews() {
-        KeepAliveService.start(this)
+        com.telnyx.webrtc.sdk.utility.KeepAliveService.start(this)
+        maybeShowReliabilitySetup()
         binding.apply {
             socketTextValue.text = getString(R.string.connected)
             loginSectionId.loginSectionView.visibility = View.GONE
